@@ -41,37 +41,31 @@ The token needs either:
 
 ## Installation
 
-### Step 1 — Clone to a stable tools directory
+### Step 1 — Clone the repo
 
 ```bash
-# macOS
+# macOS / Linux / Faberix — clone to ~/code/
 git clone https://github.com/sthurlow/VibeOversightDissertation \
-  ~/tools/VibeOversightDissertation
-
-# Linux / Faberix
-git clone https://github.com/sthurlow/VibeOversightDissertation \
-  ~/tools/VibeOversightDissertation
+  ~/code/VibeOversightDissertation
 ```
 
-Keep it in `~/tools/` or similar — the bootstrap script references its own
-location to find templates, so the path needs to be stable.
+The bootstrap script references its own directory to find templates, so
+the clone path needs to be stable across sessions. `~/code/` is recommended
+for consistency across machines.
 
 ### Step 2 — Make scripts executable
 
 ```bash
-chmod +x ~/tools/VibeOversightDissertation/scripts/setup_oversight.sh
-chmod +x ~/tools/VibeOversightDissertation/templates/capture_prompt.sh
-chmod +x ~/tools/VibeOversightDissertation/templates/prompt_audit.sh
+chmod +x ~/code/VibeOversightDissertation/scripts/setup_oversight.sh
+chmod +x ~/code/VibeOversightDissertation/templates/capture_prompt.sh
+chmod +x ~/code/VibeOversightDissertation/templates/prompt_audit.sh
 ```
 
-### Step 3 — Optional: add to PATH
-
-Add a convenience alias so you can call the bootstrap from anywhere:
+### Step 3 — Optional: add shell alias
 
 ```bash
 # Add to ~/.bashrc or ~/.zshrc
-export VIBE_OVERSIGHT="$HOME/tools/VibeOversightDissertation"
-alias setup-oversight="$VIBE_OVERSIGHT/scripts/setup_oversight.sh"
+alias setup-oversight="$HOME/code/VibeOversightDissertation/scripts/setup_oversight.sh"
 ```
 
 Then reload:
@@ -81,7 +75,17 @@ source ~/.bashrc   # or ~/.zshrc
 
 Now you can run `setup-oversight /path/to/repo` from anywhere.
 
-### Step 4 — Configure GitHub token
+### Step 4 — Bootstrap the repo against itself
+
+The first thing to do after cloning is apply the oversight protocol to the
+repo itself — it is both the tool and the first example of itself in use:
+
+```bash
+cd ~/code/VibeOversightDissertation
+./scripts/setup_oversight.sh . --skip-commit
+git add .
+git commit -m "Bootstrap oversight protocol onto itself"
+```
 
 ```bash
 # Option A: gh CLI (recommended — token refreshes automatically)
@@ -211,32 +215,38 @@ active regardless — the oversight moves from execution gates to conversation
 output.
 
 When the protocol is revised (new risk categories, updated constructs,
-additional Astro/framework-specific warnings, etc.):
+additional framework-specific warnings, etc.):
 
 ```bash
 # Pull latest from GitHub
-cd ~/tools/VibeOversightDissertation
+cd ~/code/VibeOversightDissertation
 git pull
 
 # Propagate AGENTS.md update to each target repo
 setup-oversight ~/code/tutelare --update-agents
 setup-oversight ~/code/other-repo --update-agents
-# etc.
 ```
 
 `--update-agents` touches only `AGENTS.md` in the target repo — scripts,
-CODEOWNERS, PR template, and prompts directory are left unchanged.
+CODEOWNERS, PR template, settings.json, and prompts directory are left unchanged.
 
 ---
 
 ## Multi-Machine Setup
 
-This repo is installed on both Mac (primary development) and Faberix (research workstation). Repeat Steps 1–4 on each machine. The stable clone path (`~/tools/VibeOversightDissertation`) should be consistent across machines for predictability.
+This repo is used on both Mac (primary development) and Faberix (research
+workstation). Clone to the same path on each machine for consistency:
 
-To update all machines after a protocol change:
 ```bash
 # On each machine:
-cd ~/tools/VibeOversightDissertation && git pull
+git clone https://github.com/sthurlow/VibeOversightDissertation \
+  ~/code/VibeOversightDissertation
+chmod +x ~/code/VibeOversightDissertation/scripts/setup_oversight.sh
+```
+
+Add the alias to `~/.bashrc` or `~/.zshrc` on each machine:
+```bash
+alias setup-oversight="$HOME/code/VibeOversightDissertation/scripts/setup_oversight.sh"
 ```
 
 ---
@@ -250,7 +260,7 @@ cd ~/tools/VibeOversightDissertation && git pull
 
 **`setup_oversight.sh: command not found` after alias setup:**
 - Run `source ~/.bashrc` (or `~/.zshrc`) to reload shell config
-- Or call directly: `~/tools/VibeOversightDissertation/scripts/setup_oversight.sh`
+- Or call directly: `~/code/VibeOversightDissertation/scripts/setup_oversight.sh`
 
 **CODEOWNERS shows `@OWNER` placeholder:**
 - The script couldn't detect a GitHub remote at install time
