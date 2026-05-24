@@ -1,0 +1,5 @@
+
+# AI oversight protocol
+# prompts/ and AGENTS.md are always committed — never ignore them
+.ai-local/
+.claude/settings.local.json

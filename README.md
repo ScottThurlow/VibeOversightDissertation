@@ -56,8 +56,8 @@ scripts/
 
 ```bash
 # Clone this repo
-git clone https://github.com/sthurlow/VibeOversightDissertation ~/tools/vibe-oversight
-cd ~/tools/vibe-oversight
+git clone https://github.com/sthurlow/VibeOversightDissertation ~/code/VibeOversightDissertation
+cd ~/code/VibeOversightDissertation
 
 # Bootstrap any target repo (dry run first)
 ./scripts/setup_oversight.sh /path/to/your/repo --dry-run
