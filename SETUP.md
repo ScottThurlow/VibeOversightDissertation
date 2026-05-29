@@ -13,6 +13,7 @@ How to install and maintain this bootstrap repo on a new machine.
 | `curl` | Yes | GitHub API calls (branch protection) |
 | `gh` CLI | Recommended | Token auth fallback, repo creation |
 | `GH_TOKEN` env var | For branch protection | GitHub personal access token |
+| Node 22 + agent CLIs (`claude`, `codex`, `gemini`) | For the multi-agent panel | Installed by `scripts/setup_clis.sh` — see below |
 
 macOS and Linux satisfy all of these by default except `gh`. Ubuntu 24 (including Faberix) has `curl` and `bash` pre-installed.
 
@@ -32,6 +33,20 @@ sudo apt update && sudo apt install gh
 gh auth login   # follow prompts — browser or token
 ```
 
+**Installing the agent CLIs (oversight panel):**
+
+The multi-agent review panel runs the agent CLIs locally via your *subscriptions*
+(Claude Max, ChatGPT Pro, Gemini Pro) — not API keys. The repo-independent
+`setup_clis.sh` installs them, drives browser sign-in, and smoke-tests each:
+
+```bash
+./scripts/setup_clis.sh            # install -> auth -> smoke -> doctor
+./scripts/setup_clis.sh doctor     # status only, no changes
+```
+
+It installs ONLY oversight tooling (the agent CLIs + Node runtime + `gh`) — never
+project frameworks or libraries; each project installs those separately.
+
 **GitHub token scopes needed for branch protection:**
 The token needs either:
 - Classic token: `repo` scope
@@ -45,7 +60,7 @@ The token needs either:
 
 ```bash
 # macOS / Linux / Faberix — clone to ~/code/
-git clone https://github.com/sthurlow/VibeOversightDissertation \
+git clone https://github.com/ScottThurlow/VibeOversightDissertation \
   ~/code/VibeOversightDissertation
 ```
 
@@ -138,8 +153,8 @@ VibeOversightDissertation/
 ├── LICENSE.md                   ← CC BY-NC 4.0, Copyright © 2026 Scott Thurlow
 │
 ├── scripts/
-│   └── setup_oversight.sh       ← main bootstrap script
-│                                   run this against any target repo
+│   ├── setup_oversight.sh       ← bootstrap the protocol into a target repo
+│   └── setup_clis.sh            ← install the agent CLIs on a machine (repo-independent)
 │
 └── templates/                   ← files installed into target repos
     ├── AGENTS.md                ← governance protocol for Claude Code
@@ -239,7 +254,7 @@ workstation). Clone to the same path on each machine for consistency:
 
 ```bash
 # On each machine:
-git clone https://github.com/sthurlow/VibeOversightDissertation \
+git clone https://github.com/ScottThurlow/VibeOversightDissertation \
   ~/code/VibeOversightDissertation
 chmod +x ~/code/VibeOversightDissertation/scripts/setup_oversight.sh
 ```
@@ -264,7 +279,7 @@ alias setup-oversight="$HOME/code/VibeOversightDissertation/scripts/setup_oversi
 
 **CODEOWNERS shows `@OWNER` placeholder:**
 - The script couldn't detect a GitHub remote at install time
-- Edit `.github/CODEOWNERS` manually: replace `@OWNER` with your GitHub username (e.g. `@sthurlow`)
+- Edit `.github/CODEOWNERS` manually: replace `@OWNER` with your GitHub username (e.g. `@ScottThurlow`)
 - Or push the repo to GitHub first, then re-run: `setup-oversight . --force`
 
 **Claude Code doesn't pick up AGENTS.md:**
