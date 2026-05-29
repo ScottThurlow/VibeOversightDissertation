@@ -72,7 +72,8 @@ PR=""; DRY_RUN=0; RISK_OVERRIDE=""; DO_SAMPLE=1
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --dry-run)   DRY_RUN=1; shift ;;
-    --risk)      RISK_OVERRIDE="$(echo "$2" | tr '[:lower:]' '[:upper:]')"; shift 2 ;;
+    --risk)      [[ $# -ge 2 ]] || die "--risk needs a value (LOW|MEDIUM|HIGH|CRITICAL)"
+                 RISK_OVERRIDE="$(echo "$2" | tr '[:lower:]' '[:upper:]')"; shift 2 ;;
     --no-sample) DO_SAMPLE=0; shift ;;
     --help|-h)   sed -n '2,43p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     -*)          die "Unknown option: $1  (try --help)" ;;
@@ -86,30 +87,28 @@ max_risk() { [[ "$(rank "$1")" -ge "$(rank "$2")" ]] && echo "$1" || echo "$2"; 
 
 # ── JSON extraction (best-effort — tolerate prose / code fences around the JSON) ─
 extract_json() {
-  python3 - <<'PY'
+  # NB: stdin is captured to a temp file FIRST — `python3 - <<'PY'` makes the heredoc
+  # python's stdin, so the program can't also read the piped data from stdin.
+  local _tmp; _tmp="$(mktemp)"; cat > "$_tmp"
+  python3 - "$_tmp" <<'PY'
 import sys, json, re
-data = sys.stdin.read()
+data = open(sys.argv[1]).read()
 def load(s):
     try: return json.loads(s)
     except Exception: return None
-obj = load(data)
-if obj is None:
+obj = load(data)                                   # 1) whole string is clean JSON (common)
+if obj is None:                                    # 2) fenced ```json ... ``` block
     m = re.search(r'```(?:json)?\s*(.*?)```', data, re.S)
     if m: obj = load(m.group(1))
-if obj is None:
-    for o, c in (('{', '}'), ('[', ']')):
-        start = data.find(o)
-        if start == -1: continue
-        depth = 0
-        for i in range(start, len(data)):
-            if data[i] == o: depth += 1
-            elif data[i] == c:
-                depth -= 1
-                if depth == 0:
-                    obj = load(data[start:i+1]); break
-        if obj is not None: break
+if obj is None:                                    # 3) JSON embedded in prose — raw_decode
+    dec = json.JSONDecoder()                       #    (robust to literal braces in strings
+    for i, ch in enumerate(data):                  #     and to trailing text after the JSON)
+        if ch in '{[':
+            try: obj, _ = dec.raw_decode(data[i:]); break
+            except Exception: continue
 print(json.dumps(obj if obj is not None else {"findings": []}))
 PY
+  rm -f "$_tmp"
 }
 
 # ── Model dispatch (subscription CLIs; Opus is the author and is NEVER called here) ─
@@ -149,7 +148,7 @@ mkdir -p "$RUN_DIR"
 DIFF_FILE="$RUN_DIR/pr.diff"
 gh pr diff "$PR" > "$DIFF_FILE" 2>/dev/null || die "could not fetch diff for PR #$PR"
 CHANGED_FILES="$(gh pr diff "$PR" --name-only 2>/dev/null || true)"
-ADDED=$(grep -cE '^\+[^+]' "$DIFF_FILE" 2>/dev/null || true); ADDED=${ADDED:-0}
+ADDED=$(grep -cE '^\+([^+]|$)' "$DIFF_FILE" 2>/dev/null || true); ADDED=${ADDED:-0}  # counts blank added lines; excludes +++ header
 
 info "PR #$PR — $PR_TITLE"
 info "head $HEAD_SHA · $(echo "$CHANGED_FILES" | grep -c . ) file(s) · +${ADDED} lines · run dir $RUN_DIR"
@@ -169,7 +168,7 @@ FLOOR="$(det_floor "$CHANGED_FILES" "$ADDED")"
 AUTHOR_RISK="$(gh pr view "$PR" --json commits -q '.commits[].messageBody' 2>/dev/null \
   | grep -oiE 'AI-Risk:[[:space:]]*(LOW|MEDIUM|HIGH|CRITICAL)' \
   | grep -oiE '(LOW|MEDIUM|HIGH|CRITICAL)' | tr '[:lower:]' '[:upper:]' \
-  | sort -u | while read -r r; do echo "$(rank "$r") $r"; done | sort -rn | head -1 | awk '{print $2}')"
+  | sort -u | while read -r r; do echo "$(rank "$r") $r"; done | sort -rn | head -1 | awk '{print $2}' || true)"
 [[ -n "$AUTHOR_RISK" ]] && FLOOR="$(max_risk "$FLOOR" "$AUTHOR_RISK")"
 
 if [[ -n "$RISK_OVERRIDE" ]]; then
