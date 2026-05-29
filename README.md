@@ -56,7 +56,7 @@ scripts/
 
 ```bash
 # Clone this repo
-git clone https://github.com/sthurlow/VibeOversightDissertation ~/code/VibeOversightDissertation
+git clone https://github.com/ScottThurlow/VibeOversightDissertation ~/code/VibeOversightDissertation
 cd ~/code/VibeOversightDissertation
 
 # Bootstrap any target repo (dry run first)
@@ -162,7 +162,7 @@ This work is licensed under [Creative Commons Attribution-NonCommercial 4.0 Inte
 You are free to share and adapt this material for non-commercial purposes with appropriate attribution. See `LICENSE.md` for full terms.
 
 **Attribution format for academic use:**
-> Thurlow, S. (2026). *VibeOversightDissertation: Bootstrap tooling for AI-assisted development governance* [Software]. GitHub. https://github.com/sthurlow/VibeOversightDissertation
+> Thurlow, S. (2026). *VibeOversightDissertation: Bootstrap tooling for AI-assisted development governance* [Software]. GitHub. https://github.com/ScottThurlow/VibeOversightDissertation
 
 ---
 

@@ -3,3 +3,5 @@
 # prompts/ and AGENTS.md are always committed — never ignore them
 .ai-local/
 .claude/settings.local.json
+# Antigravity CLI (agy) machine-local state — created when agy runs in a repo
+.antigravitycli/
