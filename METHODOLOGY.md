@@ -29,8 +29,8 @@ This repo is both the **tool** and the **experiment** — it bootstraps that met
 ### Layer 1 — Self-flagging (single agent) ✅ Implemented
 The authoring AI flags its *own* work, per **[`AGENTS.md`](AGENTS.md)**: every non-trivial change gets a risk classification, human-review flags, a confidence declaration, hallucination warnings, and a blast-radius note for destructive operations. This is "a senior engineer who flags their own work," not a code dispenser.
 
-### Layer 2 — Independent review (multiple agents) 🔧 Designed
-Self-flagging has a blind spot: an AI is bad at catching its *own* class of mistakes. So a second layer brings in **independent reviewers from different vendors** to check the author's work, scaled by risk, culminating in a human gate. This is the multi-agent "panel" (§6), not yet built.
+### Layer 2 — Independent review (multiple agents) 🔧 Built, not yet exercised
+Self-flagging has a blind spot: an AI is bad at catching its *own* class of mistakes. So a second layer brings in **independent reviewers from different vendors** to check the author's work, scaled by risk, culminating in a human gate. This is the multi-agent "panel" (§6), implemented in [`scripts/run_panel.sh`](scripts/run_panel.sh) (triage → cross-vendor reviewers → arbiter → posts threads to the PR) — built, awaiting its first run on a live PR.
 
 The two layers compose: the author self-flags (Layer 1), then independent reviewers scrutinize (Layer 2), then the human decides.
 
@@ -45,12 +45,14 @@ We deliberately use **multiple vendors and model tiers** — the whole point is 
 | **Claude** (Opus / Sonnet / Haiku) | Claude Max (20×) | `claude` CLI | Author (Opus), triage & cheap review (Haiku), arbiter (Sonnet) |
 | **OpenAI** | ChatGPT Pro | `codex` CLI (`codex exec`) | Independent reviewer / adversary (high risk) |
 | **Google** | Gemini Pro | `agy` (Antigravity CLI) | Independent cross-vendor reviewer; architecture/whole-repo lens |
-| **GitHub Copilot** | Free tier | GitHub-native PR review | Supplemental PR reviewer (medium risk and up) |
+| **GitHub Copilot** | Copilot Pro ($10/mo) | GitHub-native PR review | **Baseline reviewer on _every_ PR** (automatic, in CI) |
 
 **Key constraints that shape the design:**
 - These are **app/CLI subscriptions, not API keys.** To use the quota you pay for, each reviewer runs through its subscription-authenticated CLI — *not* a metered API. (Why the panel runs **locally**, not in CI — see §6.)
 - **Opus is the author**, so Opus may never review its own output. At the highest risk, the *independent* votes must be **cross-vendor** (Google/OpenAI); same-vendor Claude tiers can assist but don't count as the independent check.
-- **Quota-aware allocation:** spend the abundant Claude Max quota on high-frequency roles (author, triage, arbiter); reserve scarce ChatGPT Pro reasoning for high-risk review and adversarial passes; use Antigravity's large context for breadth; protect Copilot's free monthly cap (medium-risk and up only).
+- **Copilot is the always-on floor, the cross-vendor panel is the escalation.** Copilot runs automatically on **every** PR (GitHub-native, in CI) — including LOW changes the local panel skips — so there is an AI review on everything without spending subscription quota. The cross-vendor panel (`agy`/`codex`) then layers on by risk. (Copilot Pro required; from 2026-06-01 each review is metered at a 13× premium-request multiplier + Actions minutes, ≈ 20+ reviews/mo on Pro — see [`DECISIONS.md` D16](DECISIONS.md).)
+- **Quota-aware allocation:** spend the abundant Claude Max quota on high-frequency roles (author, triage, arbiter); reserve scarce ChatGPT Pro reasoning for high-risk review and adversarial passes; use Antigravity's large context for breadth.
+- **Why no Claude in the reviewer seat:** Opus is the author, so no Claude model casts an independent review — same-vendor judgement correlates errors. Sonnet is the **arbiter** (synthesis), never an independent reviewer; the independent votes are cross-vendor (`agy`/`codex`).
 
 > Google is retiring the Gemini CLI (consumer shutoff **2026-06-18**) in favor of the **Antigravity CLI (`agy`)**, which is what the tooling now installs.
 
@@ -77,14 +79,16 @@ Risk classification (from [`AGENTS.md`](AGENTS.md)) is the dial that controls ho
 
 | Level | Criteria | Scrutiny (escalating) |
 |---|---|---|
-| **LOW** | Pure UI/styling, no logic/data/external calls | Self-flag only; deterministic gates; spot-check. No prompt artifact required. |
-| **MEDIUM** | Business logic, data transforms, state, routing | + prompt artifact captured; ≥1 **independent cross-vendor** reviewer + Copilot; human reviews flagged items. |
-| **HIGH** | Auth, input handling, persistence, external APIs | + more reviewers incl. a **security lens**; human reviews line-by-line. |
-| **CRITICAL** | XSS/CSRF/injection, PII, payments, destructive ops | + **adversary/red-team** pass; **blast-radius required**; **mandatory human approval**. |
+| **LOW** | Pure UI/styling, no logic/data/external calls | Self-flag; deterministic gates; **Copilot baseline review (auto, all PRs)**; **random red-team audit (SQC sample)**. No prompt artifact required. |
+| **MEDIUM** | Business logic, data transforms, state, routing | + prompt artifact captured; **local panel runs**: ≥1 **independent cross-vendor** reviewer (`agy`); human reviews flagged items. |
+| **HIGH** | Auth, input handling, persistence, external APIs | + a **security lens** + an **adversary/red-team pass** (always-on at HIGH); human reviews line-by-line. |
+| **CRITICAL** | XSS/CSRF/injection, PII, payments, destructive ops | same panel roster as HIGH + **blast-radius required** + **mandatory human approval**. |
 
 **Who assigns risk:** a deterministic floor (file-path globs like `auth/**` or `**/migrations/**`, dependency-manifest changes, diff size) the author can *raise* freely but can only *lower* with a second agent's or the human's concurrence. Triage signals also include: blast radius (import-graph reach), computational complexity, reversibility, test coverage of touched lines, and cheap static-analysis findings.
 
 This is the research hypothesis in action: **risk-stratified flagging** routes 100% review to CRITICAL and spot-checks LOW — oversight that scales.
+
+**Random red-team audit (Statistical Quality Control).** The adversary/red-team pass is *always-on at HIGH+*; below that, a *salted-random sample* of LOWER-tier PRs (LOW/MEDIUM) gets one too — so red-team coverage is **guaranteed at HIGH+ and probabilistic below**. This audits the auto-pass lane — catching changes that were mis-triaged as low — and yields an **escaped-defect rate**: an empirical measure of how many defects survive in the population we chose not to scrutinize, which is the signal for whether the tier thresholds are calibrated. Selection is a salted deterministic hash of the PR's head SHA (reproducible and auditable, non-gameable without the secret salt); production rates are LOW 5% / MEDIUM 15% (elevated during the pilot so it visibly fires). See [`DECISIONS.md` D17](DECISIONS.md).
 
 ---
 
@@ -104,12 +108,12 @@ How a change flows from prompt to merge. Deterministic, cheap checks run first (
                        must be resolved before merge.                               [✅]
 6. CHEAP GATES       (CI) lint, types, build, unit tests, secret scan, npm audit.
                        Fail fast before spending review tokens.                      [🔧 per-project]
-7. TRIAGE            Determine final risk level (§5).                                [🔧]
+7. TRIAGE            Determine final risk level (§5).                                [🔧 run_panel.sh]
 8. EXPENSIVE GATES   Gated by risk: e2e/system tests, coverage, mutation testing.    [🔧]
 9. AI PANEL          Independent reviewers (by risk) run LOCALLY via subscription
                        CLIs, each with a lens; adversary at HIGH/CRITICAL. Findings
-                       posted to the PR.                                             [🔧 run_panel.sh]
-10. ARBITER          Synthesizes reviews → verdict; requests changes or escalates.   [🔧]
+                       posted to the PR as line-level threads.                        [🔧 run_panel.sh]
+10. ARBITER          Synthesizes reviews → verdict; requests changes or escalates.   [🔧 run_panel.sh]
 11. HUMAN GATE       Mandatory at HIGH/CRITICAL; PR conversation-resolution forces
                        each finding to be addressed before merge.                    [✅ gate / 🔧 panel]
 12. MERGE → ARCHIVE  Raw review/turn logs archived; summaries regenerable (§7).      [🔧]
@@ -141,7 +145,7 @@ See [`AGENTS.md` → Prompts-as-Artifact Discipline](AGENTS.md) for the authorit
 | **`scripts/prompt_audit.sh`** | Queries the provenance trail: `--stats`, `--pending`, `--risk LEVEL`. | ✅ |
 | **`.claude/settings.json`** | Risk-tiered permission policy: auto-allow reads/safe writes/commits; prompt on push/config; **block** `git push --force`, `rm -rf`, `.env` writes, `sudo`, `curl \| bash`. | ✅ |
 | **`.github/CODEOWNERS` + PR template + branch protection** | Owner approval on all files; PR checklist tied to the protocol; `main` requires approval + conversation resolution. | ✅ |
-| **`scripts/run_panel.sh`** | The local multi-agent review orchestrator (§6 steps 7–10). | 🔧 designed |
+| **`scripts/run_panel.sh`** | The local multi-agent review orchestrator (§6 steps 7–10): triage (Haiku) → cross-vendor reviewers (`agy`/`codex`) → arbiter (Sonnet) → posts per-finding line threads + a summary to the PR. | 🔧 built, not yet exercised on a live PR |
 
 **Scope rule for the bootstrap:** it installs *only* what the oversight system needs (agent CLIs, their Node runtime, `gh`). Project frameworks/libraries are out of scope — each project installs its own.
 
