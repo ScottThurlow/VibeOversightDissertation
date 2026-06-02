@@ -14,12 +14,14 @@
 #   POST       one line-level review THREAD per finding (author responds → must resolve)
 #              + one arbiter SUMMARY comment for the human's overview
 #
-# Reviewer roster by risk (see DECISIONS.md D15/D17/D18):
-#   MEDIUM   → agy (correctness)                          [+ Copilot native, not driven here]
-#   HIGH     → agy (correctness) + codex (security) + codex (adversary/red-team)
+# Reviewer roster by risk (see DECISIONS.md D15/D17/D18/D19):
+#   MEDIUM   → agy (correctness) + ipcheck (IP/provenance)  [+ Copilot native, not driven here]
+#   HIGH     → agy (correctness) + codex (security) + codex (adversary) + ipcheck (IP/provenance)
 #   CRITICAL → same roster; + blast-radius required + mandatory human gate
 #   LOW      → panel skipped — UNLESS picked by the random red-team audit (below)
 # Red-team (adversary) is ALWAYS-on at HIGH+ and PROBABILISTIC (SQC sample) at LOW/MEDIUM.
+# IP/provenance (ipcheck) is a LOCAL built-in agent (not a vendor CLI) — a PLACEHOLDER today
+# (no analysis yet), grown over time (D19); a clean verdict from it is NOT yet an IP clearance.
 #
 # Random red-team audit (SQC, D17): a salted-deterministic % of LOWER-tier PRs get an
 # extra adversary pass — LOW/MEDIUM sampled at OVERSIGHT_SAMPLE_LOW/MED (pilot: 25/50,
@@ -119,8 +121,32 @@ call_model() {
     sonnet) claude -p --model sonnet "$prompt" 2>>"$RUN_DIR/errors.log" ;;
     agy)    agy   -p "$prompt"                 2>>"$RUN_DIR/errors.log" ;;
     codex)  codex exec "$prompt"               2>>"$RUN_DIR/errors.log" ;;
+    ipcheck) ip_agent "$prompt" ;;             # LOCAL built-in agent — not a vendor CLI
     *)      echo "" ;;
   esac
+}
+
+# ── IP / provenance agent (LOCAL built-in) ───────────────────────────────────────
+# A first-class panel member checking INTELLECTUAL-PROPERTY exposure — a risk axis
+# ORTHOGONAL to correctness/security (D19): copyleft/unknown-license code or deps
+# entering the tree, verbatim regurgitation of copyrighted training-data code, and
+# permissively-licensed code copied without its required attribution/notice. Unlike the
+# other reviewers it is not a vendor LLM CLI but a local function we own — so its brain
+# can grow without ever re-wiring the panel around it.
+#
+# STATUS: PLACEHOLDER (IP_STUB=1). It performs NO analysis and always returns a clean,
+# empty verdict — Scott's deliberate "start stupid, says it's ok" v0. A clean result is
+# therefore NOT an IP clearance (the panel summary says so). Growth path — each step
+# keeps this same {"findings":[...]} interface, so only this function changes:
+#   1. deterministic license gate: flag changed dependency manifests + vendored files
+#      whose license is copyleft/unknown (scancode / license-checker) → tier1/tier2.
+#   2. attribution check: permissive-licensed code copied without its notice.
+#   3. regurgitation lens: similarity/LLM pass flagging snippets that look lifted; the
+#      prompt-as-source artifact (D8) is the clean-room counter-evidence.
+# When a step lands, set IP_STUB=0 to drop the placeholder caveat from the summary.
+IP_STUB=1
+ip_agent() {  # $1 = the standard review prompt/diff (ignored while IP_STUB=1)
+  echo '{"findings":[]}'
 }
 
 # ── Preflight ───────────────────────────────────────────────────────────────---
@@ -240,13 +266,15 @@ fi
 
 # ── Reviewer roster for this risk level (+ red-team if sampled) ──────────────────
 if [[ "$RISK" == "LOW" ]]; then
-  ROSTER=("agy:correctness" "codex:adversary")          # only reached when SAMPLED
+  ROSTER=("agy:correctness" "codex:adversary" "ipcheck:ip")   # only reached when SAMPLED
 else
   ROSTER=("agy:correctness")
   [[ "$(rank "$RISK")" -ge 2 ]] && ROSTER+=("codex:security")                     # HIGH+
   [[ "$(rank "$RISK")" -ge 2 ]] && ROSTER+=("codex:adversary")                    # HIGH+ : red-team ALWAYS (D18)
   [[ "$RISK" == "MEDIUM" && $SAMPLED -eq 1 ]] && ROSTER+=("codex:adversary")      # sampled MEDIUM (SQC)
+  ROSTER+=("ipcheck:ip")                                                          # IP/provenance — every panel run (D19)
 fi
+IP_IN_ROSTER=0; printf '%s\n' "${ROSTER[@]}" | grep -q '^ipcheck:' && IP_IN_ROSTER=1
 info "roster ($RISK$( ((SAMPLED)) && echo ' +audit' )): ${ROSTER[*]}   (Opus authored → excluded; Copilot runs natively in CI)"
 
 # ── Chunk the diff if it exceeds the cap (split on file boundaries) ─────────────
@@ -266,6 +294,7 @@ lens_brief() {
     correctness) echo "logic errors, wrong edge cases, off-by-one, incorrect or HALLUCINATED library/framework APIs, broken assumptions, missing error handling." ;;
     security)    echo "injection (SQL/cmd/XSS/SSRF/CSRF), auth/authorization flaws, secret/credential mishandling, unsafe handling of untrusted input, insecure defaults." ;;
     adversary)   echo "actively TRY TO BREAK this. Assume hostile users and worst-case inputs/sequencing. What is the single worst thing that can go wrong, and the exact input that triggers it?" ;;
+    ip)          echo "intellectual-property exposure: copyleft (GPL/AGPL) or unknown-license code or dependencies entering the tree, verbatim regurgitation of copyrighted source, and permissively-licensed code copied without its required attribution/notice." ;;
     *)           echo "general code quality and correctness." ;;
   esac
 }
@@ -293,7 +322,7 @@ EOF
 ALL_FINDINGS="[]"
 for spec in "${ROSTER[@]}"; do
   tool="${spec%%:*}"; lens="${spec##*:}"
-  if ! command -v "$tool" >/dev/null 2>&1; then warn "skip $spec — $tool not on PATH"; continue; fi
+  if [[ "$tool" != "ipcheck" ]] && ! command -v "$tool" >/dev/null 2>&1; then warn "skip $spec — $tool not on PATH"; continue; fi
   info "reviewing: ${BOLD}$tool${RESET} · lens=$lens"
   tool_findings="[]"
   ci=0
@@ -396,6 +425,9 @@ if [[ "$RISK" == "CRITICAL" ]]; then
   if ! gh pr view "$PR" --json commits -q '.commits[].messageBody' 2>/dev/null | grep -qi 'blast.radius'; then
     SUMMARY_BODY+=$'\n\n> ⚠️ **CRITICAL** change with no blast-radius note found in commit trailers — a blast-radius assessment is required (AGENTS.md §5) before merge.'
   fi
+fi
+if (( IP_IN_ROSTER )) && (( IP_STUB )); then
+  SUMMARY_BODY+=$'\n\n> ⚖️ **IP/provenance was checked by a placeholder agent** — `ipcheck` ran but performs no real analysis yet (D19), so a clean result here is **not** an IP clearance.'
 fi
 SUMMARY_BODY+=$'\n\n<sub>Posted by `run_panel.sh` — independent cross-vendor review. Threads must be resolved before merge (branch policy D12). Author: respond on each thread.</sub>'
 
