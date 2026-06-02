@@ -68,6 +68,7 @@ Roles are defined first; models are then assigned to roles (§3). Think *separat
 | **Triage** | Scores the change's risk (see §5). Deterministic rules set a floor; the author cannot lower its own risk. | rules + Claude Haiku |
 | **Reviewer(s)** | Independent critique, each with a *lens*: correctness, security, maintainability, spec-conformance. Count scales with risk. | Antigravity, Codex, Copilot |
 | **Adversary / red-team** | Actively tries to *break* the change rather than bless it. High/critical risk only. | Codex or Antigravity |
+| **IP / provenance** | Checks intellectual-property exposure — copyleft/unknown-license code or deps entering the tree, verbatim regurgitation of copyrighted source, stripped attribution. An axis *orthogonal* to the risk tier; surfaces exposure for human/legal review, does not adjudicate. Runs on every panel pass. | `ipcheck` (local built-in agent; placeholder today, grown over time — [`DECISIONS.md` D19](DECISIONS.md)) |
 | **Arbiter** | Reconciles conflicting reviews into a single verdict + rationale; dedups; loops back to author or escalates. (Synthesizes others' independent reviews — not itself the independent check.) | Claude Sonnet |
 | **Human** | Sets policy; the final gate for high/critical changes; spot-checks the rest. | You |
 

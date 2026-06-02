@@ -105,6 +105,21 @@ The initial roster (D15) gave the adversary/red-team pass only at CRITICAL — l
 
 CRITICAL is no longer distinguished by *whether* a red-team runs (HIGH has one too) but by **blast-radius required + mandatory human approval**. Cost: one extra `codex` call per HIGH PR — acceptable, as HIGH is comparatively rare and the adversarial lens is highest-value there.
 
+## 2026-06-02 — IP/provenance as a fourth risk axis
+
+### D19. IP/provenance is a first-class panel agent (`ipcheck`), orthogonal to the risk tier
+
+Vibe coding carries an **intellectual-property** risk the panel didn't cover: an LLM can emit code that is a verbatim/near-verbatim lift of copyrighted training data, drag copyleft (GPL/AGPL) or unknown-license code into a proprietary tree, or strip the attribution permissive licenses require. Crucially this is **invisible to every existing lens** — correctness/security/maintainability all read the code for *defects*, and IP-tainted code can be perfectly correct and secure. The cleaner and more idiomatic the output, the *more* likely it was regurgitated rather than synthesized — so good-looking code is a weak signal in the wrong direction.
+
+**Decision:** add an **IP/provenance agent** to the panel as a peer reviewer (lens `ip`). Design choices locked:
+
+- **A LOCAL built-in agent, not a vendor CLI.** Dispatched through `call_model` as `ipcheck`, backed by a function (`ip_agent`) we own — so its brain can grow without re-wiring the panel. It emits the same `{"findings":[...]}` schema every reviewer uses, flowing through the existing arbiter → thread machinery for free.
+- **Runs on every panel invocation** (MEDIUM+, and LOW when sampled). IP exposure is *orthogonal* to the security/correctness tier, so it isn't gated by it. (Future: extend to LOW too, which the panel currently exits before reaching — noted, not yet built.)
+- **Ships as a deliberate placeholder (`IP_STUB=1`).** v0 performs no analysis and returns a clean verdict — "start stupid, says it's ok." To prevent false assurance, a no-op clean result is **explicitly flagged in the panel summary as NOT an IP clearance.** A stub that quietly looks like a green light would be worse than no agent.
+- **Growth path (function-local, interface stable):** (1) deterministic license gate on changed dependency manifests + vendored files (copyleft/unknown → tier1/tier2); (2) attribution check for copied permissive-licensed code; (3) similarity/LLM regurgitation lens. Flip `IP_STUB=0` once a real step lands to drop the caveat.
+- **The pipeline surfaces IP exposure; it does not adjudicate it.** Like security risk, an ELEVATED finding routes to a human — and specifically to *counsel*. This is not legal advice. The **prompt-as-source artifact (D8) doubles as clean-room counter-evidence**: code regenerable from a spec that never said "copy library X" is documentary provenance.
+
 ### Still open / pending
+- **IP agent — make it functional** 🔧 — implement growth step 1 (license gate) so `ipcheck` does real work; then flip `IP_STUB=0` (D19).
 - **Raw archive + watermark** 🔧 — the append-only turn log + regenerable summaries (D8).
 - `.antigravitycli/` into `setup_oversight.sh`'s emitted `.gitignore`; Windows support in `setup_clis.sh`.
