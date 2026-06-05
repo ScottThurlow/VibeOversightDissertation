@@ -1,0 +1,19 @@
+# Secrets
+.env
+*.env
+!.env.example
+
+# Data (item content / abstracts live outside the repo)
+*.csv
+*.xlsx
+*.xls
+*.ris
+
+# Run artifacts
+*.log
+*.pid
+proposed_*.csv
+checkpoint*.json
+batch_*.csv
+__pycache__/
+*.pyc
