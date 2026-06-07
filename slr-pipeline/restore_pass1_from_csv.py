@@ -68,9 +68,9 @@ def _load_env_file():
     return None
 _load_env_file()
 
-READ_KEY  = os.environ.get("ZOTERO_API_KEY", "")
-WRITE_KEY = os.environ.get("ZOTERO_WRITE_KEY", "")
-BASE = "https://api.zotero.org/groups/6505702"
+READ_KEY  = os.environ.get("VCSLR_ZOTERO_READ_KEY") or os.environ.get("ZOTERO_API_KEY", "")  # VCSLR read key (env / project .env)
+WRITE_KEY = os.environ.get("VCSLR_ZOTERO_WRITE_KEY") or os.environ.get("ZOTERO_WRITE_KEY", "")  # VCSLR write key (inline at --apply)
+BASE = "https://api.zotero.org/groups/" + os.environ.get("VCSLR_ZOTERO_LIBRARY_ID", "6505702")
 
 SOURCE_PARENTS = {
     "ieee":"7XHWH8NM","scopus":"2RWBC7QH","wos":"E7AS4HD4","arxiv":"YK2CHQLN",

@@ -4,18 +4,25 @@ Reproducibility tooling for the SLR: query import, two-pass screening,
 cross-source dedup, cross-model validation, and Zotero state reconciliation.
 Zotero group library `6505702`.
 
-## Credentials (project-scoped)
+## Credentials (project-scoped, VCSLR-prefixed)
 
 No keys are stored in source. Each script loads a project-scoped `.env` by
 walking up from the current directory to the repo root (or `$ZOTERO_ENV_FILE`).
-Because the key is resolved from the working tree, different projects keep
-different keys. Copy `.env.example` to `.env` at the repo root and `chmod 600`.
+Variable names are prefixed `VCSLR_` so multiple projects' keys never collide;
+scripts read the `VCSLR_*` name first and fall back to the generic name if unset.
 
-The read-only key suffices for diagnostics, dry runs, and reads. The write key
-is only needed for writes; prefer passing it inline at apply time:
+| Purpose      | Variable (preferred)      | Fallback            |
+|--------------|---------------------------|---------------------|
+| Read-only    | `VCSLR_ZOTERO_READ_KEY`   | `ZOTERO_API_KEY`    |
+| Write        | `VCSLR_ZOTERO_WRITE_KEY`  | `ZOTERO_WRITE_KEY`  |
+| Library ID   | `VCSLR_ZOTERO_LIBRARY_ID` | (defaults to 6505702) |
+
+Copy `.env.example` to `.env` at the repo root, fill in the read key, `chmod 600`.
+The read key suffices for diagnostics, dry runs, and reads. Prefer passing the
+write key inline only at apply time so it never rests on disk:
 
 ```bash
-ZOTERO_WRITE_KEY=xxxx python3 restore_pass1_from_csv.py ... --apply
+VCSLR_ZOTERO_WRITE_KEY=xxxx python3 restore_pass1_from_csv.py ... --apply
 ```
 
 ## Scripts
