@@ -46,8 +46,8 @@ import urllib.request
 import time
 from collections import defaultdict
 
-ZOTERO_API_KEY = os.environ.get("ZOTERO_API_KEY", "")  # from env / project .env
-BASE = "https://api.zotero.org/groups/6505702"
+ZOTERO_API_KEY = os.environ.get("VCSLR_ZOTERO_READ_KEY") or os.environ.get("ZOTERO_API_KEY", "")  # VCSLR read key (env / project .env)
+BASE = "https://api.zotero.org/groups/" + os.environ.get("VCSLR_ZOTERO_LIBRARY_ID", "6505702")
 RATE_LIMIT_SEC = 0.3
 
 # Phase 2 collection keys (discovered 2026-05-26)

@@ -64,9 +64,9 @@ from datetime import datetime, timezone
 # ============================================================
 # CONFIG
 # ============================================================
-ZOTERO_API_KEY_RO = os.environ.get("ZOTERO_API_KEY", "")  # from env / project .env
-ZOTERO_API_KEY_RW = os.environ.get("ZOTERO_WRITE_KEY", "")  # from env / project .env
-LIB = "6505702"
+ZOTERO_API_KEY_RO = os.environ.get("VCSLR_ZOTERO_READ_KEY") or os.environ.get("ZOTERO_API_KEY", "")  # VCSLR read key (env / project .env)
+ZOTERO_API_KEY_RW = os.environ.get("VCSLR_ZOTERO_WRITE_KEY") or os.environ.get("ZOTERO_WRITE_KEY", "")  # VCSLR write key (inline at --apply)
+LIB = os.environ.get("VCSLR_ZOTERO_LIBRARY_ID", "6505702")
 ZOTERO_BASE = f"https://api.zotero.org/groups/{LIB}"
 
 TARGET_COLLECTION_NAME = "Q-arXiv-06"

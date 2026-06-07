@@ -48,8 +48,8 @@ def _load_env_file():
     return None
 _load_env_file()
 
-KEY = os.environ.get("ZOTERO_API_KEY", "")  # read-only
-BASE = "https://api.zotero.org/groups/6505702"
+KEY = os.environ.get("VCSLR_ZOTERO_READ_KEY") or os.environ.get("ZOTERO_API_KEY", "")  # VCSLR read key (env / project .env)
+BASE = "https://api.zotero.org/groups/" + os.environ.get("VCSLR_ZOTERO_LIBRARY_ID", "6505702")
 
 def zget(path):
     req = urllib.request.Request(f"{BASE}{path}",

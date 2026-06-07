@@ -5,3 +5,21 @@
 .claude/settings.local.json
 # Antigravity CLI (agy) machine-local state — created when agy runs in a repo
 .antigravitycli/
+
+# Secrets — never commit
+.env
+*.env
+**/claude-zotero/.env
+ 
+# Data files (contain item content / abstracts; live outside the repo)
+*.csv
+*.xlsx
+*.xls
+ 
+# Run artifacts
+*.log
+*.pid
+proposed_*.csv
+checkpoint.json
+__pycache__/
+*.pyc

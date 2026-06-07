@@ -47,8 +47,8 @@ from datetime import datetime, timezone
 # ============================================================
 # CONFIG
 # ============================================================
-ZOTERO_API_KEY = os.environ.get("ZOTERO_API_KEY", "")  # from env / project .env
-LIB = "6505702"
+ZOTERO_API_KEY = os.environ.get("VCSLR_ZOTERO_READ_KEY") or os.environ.get("ZOTERO_API_KEY", "")  # VCSLR read key (env / project .env)
+LIB = os.environ.get("VCSLR_ZOTERO_LIBRARY_ID", "6505702")
 BASE = f"https://api.zotero.org/groups/{LIB}"
 QUEUE_COLLECTION = "DXPF25DB"
 

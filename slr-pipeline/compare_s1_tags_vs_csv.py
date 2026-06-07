@@ -47,8 +47,8 @@ _load_env_file()
 # ZOTERO_SANITIZED: keys read from env / project .env (see .env.example)
 from collections import defaultdict, Counter
 
-KEY = os.environ.get("ZOTERO_API_KEY", "")  # read-only
-BASE = "https://api.zotero.org/groups/6505702"
+KEY = os.environ.get("VCSLR_ZOTERO_READ_KEY") or os.environ.get("ZOTERO_API_KEY", "")  # VCSLR read key (env / project .env)
+BASE = "https://api.zotero.org/groups/" + os.environ.get("VCSLR_ZOTERO_LIBRARY_ID", "6505702")
 
 def zget(path):
     req = urllib.request.Request(f"{BASE}{path}",
