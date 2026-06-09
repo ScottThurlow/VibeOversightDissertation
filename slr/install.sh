@@ -223,12 +223,12 @@ if claude mcp list 2>/dev/null | grep -q "^semantic-scholar:"; then
   ok "MCP server 'semantic-scholar' already registered."
 else
   if [[ -n "$S2_KEY" ]]; then
-    claude mcp add --scope user \
+    claude mcp add --scope user semantic-scholar \
       -e "SEMANTIC_SCHOLAR_API_KEY=${S2_KEY}" \
-      semantic-scholar -- uvx semantic-scholar-fastmcp
+      -- uvx semantic-scholar-fastmcp
   else
-    claude mcp add --scope user \
-      semantic-scholar -- uvx semantic-scholar-fastmcp
+    claude mcp add --scope user semantic-scholar \
+      -- uvx semantic-scholar-fastmcp
     warn "No S2 key — running unauthenticated (1 req/sec). Calls must be sequential."
   fi
   ok "Semantic Scholar MCP server registered."
