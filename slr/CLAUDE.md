@@ -165,11 +165,11 @@ Tag format: `s2:human:maybe`, `s2:human:keep`, etc.
 
 **Phase 3 rubric:** NOT YET DRAFTED — draft before building screening script.
 
-### Citation Chasing — PENDING (blocked on Semantic Scholar key) ⏳
+### Citation Chasing — PENDING (waiting on Phase 3 corpus) ⏳
 - Chase from Phase 3 final corpus (~150–200 papers), not all 982
 - Semantic Scholar MCP: `paper_citations` (forward) + `paper_references` (backward)
 - De-dup against full corpus → screen new entrants through Pass 1 rubric
-- **Blocked:** Semantic Scholar API key application pending (1 req/sec unauthenticated — too slow)
+- **Semantic Scholar API key active** (added 2026-06-09; still 1 req/sec — sleep between calls)
 
 ---
 
@@ -308,7 +308,7 @@ See repo: `AGENTS.md`, `FLOW.md`, `BRAINSTORM_BRIEF.md`
    (run in Zotero desktop; Purdue EZProxy already configured)
 3. **Run pending database queries** — ACM, arXiv, Scopus, WoS, AI House panel, Agentic SDLC cluster
 4. **Build Phase 3 screening script** — after rubric drafted and PDFs available
-5. **Citation chasing** — after Phase 3 final corpus identified; blocked on Semantic Scholar key
+5. **Citation chasing** — after Phase 3 final corpus identified; S2 key now active ✅
 6. **Fix `cleanup_superseded_tags.py` date tiebreaker** before next dedup run
 
 ---
